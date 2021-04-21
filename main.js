@@ -30,6 +30,42 @@ function distance_between_points(x1, y1, x2, y2) {
         (x2 - x1) ** 2 + (y2 - y1) ** 2
     );
 }
+function draw_triangle(x, y, lineWidth, radius, strokeColor, fillColor, angle) {
+
+    c.lineWidth = lineWidth;
+
+    c.beginPath();
+
+    c.moveTo(//nose
+        x + (4 / 3) * radius * Math.cos(angle),
+        y - (4 / 3) * radius * Math.sin(angle)
+    );
+
+    c.lineTo(//rear left
+        x - radius * ((2 / 3) * Math.cos(angle) + Math.sin(angle)),
+        y + radius * ((2 / 3) * Math.sin(angle) - Math.cos(angle))
+    );
+
+    c.lineTo(//rear right
+        x - radius * ((2 / 3) * Math.cos(angle) - Math.sin(angle)),
+        y + radius * ((2 / 3) * Math.sin(angle) + Math.cos(angle))
+    );
+    c.closePath();
+    if (strokeColor !== null) {
+        c.strokeStyle = strokeColor;
+        c.stroke();
+    }
+    if (fillColor !== null) {
+        c.fillStyle = fillColor;
+        c.fill()
+    }
+}
+function draw_circle(x, y, radius, fill_color) {
+    c.fillStyle = fill_color;
+    c.beginPath();
+    c.arc(x, y, radius, 0, Math.PI * 2, false);
+    c.fill();
+}
 
 //game objects
 class Laser {
@@ -60,20 +96,9 @@ class Laser {
             c.fill();
         }
         else {
-            c.fillStyle = "orange";
-            c.beginPath();
-            c.arc(this.x, this.y, (SHIP_SIZE / 2) * 0.75, 0, Math.PI * 2, false);
-            c.fill();
-
-            c.fillStyle = "salmon";
-            c.beginPath();
-            c.arc(this.x, this.y, (SHIP_SIZE / 2) * 0.5, 0, Math.PI * 2, false);
-            c.fill();
-
-            c.fillStyle = "#pink";
-            c.beginPath();
-            c.arc(this.x, this.y, (SHIP_SIZE / 2) * 0.25, 0, Math.PI * 2, false);
-            c.fill();
+            draw_circle(this.x, this.y, (SHIP_SIZE / 2) * 0.75, "orange");
+            draw_circle(this.x, this.y, (SHIP_SIZE / 2) * 0.5, "salmon");
+            draw_circle(this.x, this.y, (SHIP_SIZE / 2) * 0.25, "pink");
         }
     }
     handle_screen_edge() {
@@ -97,8 +122,6 @@ class Laser {
             //calculate distance covered
             this.distance_traveled += Math.sqrt(this.dx ** 2 + this.dy ** 2);
         }
-
-
         this.handle_screen_edge();
         this.manage_explosion_state();
         this.draw();
@@ -170,10 +193,10 @@ class Ship {
     shoot_laser() {
         if (this.can_shoot && this.lasers.length < LASER_MAX) {
             this.lasers.push(new Laser(
-                this.x + (4 / 3) * this.r * Math.cos(ship.a),
-                this.y - (4 / 3) * this.r * Math.sin(ship.a),
-                LASER_SPEED * Math.cos(ship.a) / FPS,
-                LASER_SPEED * Math.sin(ship.a) / FPS
+                this.x + (4 / 3) * this.r * Math.cos(this.a),
+                this.y - (4 / 3) * this.r * Math.sin(this.a),
+                LASER_SPEED * Math.cos(this.a) / FPS,
+                LASER_SPEED * Math.sin(this.a) / FPS
             ));
         }
         this.canShoot = false;
@@ -182,79 +205,22 @@ class Ship {
         //not drawing the ship and thruster while the ship is under explosion
         if (!this.exploding) {//drawing thruster
             if (this.blink_num % 2 == 0) {
-                if (this.thrusting) {//draw thruster
-                    c.strokeStyle = "red";
-                    c.fillStyle = "yellow";
-                    c.lineWidth = SHIP_SIZE / 20;
-                    c.beginPath();
-
-                    c.moveTo(//rear left
-                        this.x - this.r * ((2 / 3) * Math.cos(this.a) + 0.5 * Math.sin(this.a)),
-                        this.y + this.r * ((2 / 3) * Math.sin(this.a) - 0.5 * Math.cos(this.a))
-                    );
-
-                    c.lineTo(//center behind the ship
-                        this.x - (6 / 3) * this.r * Math.cos(ship.a),
-                        this.y + (6 / 3) * this.r * Math.sin(ship.a)
-                    );
-                    c.lineTo(//rear right
-                        this.x - this.r * ((2 / 3) * Math.cos(this.a) - 0.5 * Math.sin(this.a)),
-                        this.y + this.r * ((2 / 3) * Math.sin(this.a) + 0.5 * Math.cos(this.a))
-                    );
-                    c.fill();
-                    c.closePath();
-                    c.stroke();
+                if (this.thrusting) {
+                    //draw thruster
+                    draw_triangle(this.x - this.r * Math.cos(this.a) * (8 / 7), this.y + this.r * Math.sin(this.a) * (8 / 7), SHIP_SIZE / 20, this.r * 1 / 2, "red", "yellow", this.a + Math.PI);
                 }
 
                 //drawing ship
-                c.strokeStyle = "white";
-                c.lineWidth = SHIP_SIZE / 20;
-                c.beginPath();
-
-                c.moveTo(//nose
-                    this.x + (4 / 3) * this.r * Math.cos(ship.a),
-                    this.y - (4 / 3) * this.r * Math.sin(ship.a)
-                );
-
-                c.lineTo(//rear left
-                    this.x - this.r * ((2 / 3) * Math.cos(this.a) + Math.sin(this.a)),
-                    this.y + this.r * ((2 / 3) * Math.sin(this.a) - Math.cos(this.a))
-                );
-
-                c.lineTo(//rear right
-                    this.x - this.r * ((2 / 3) * Math.cos(this.a) - Math.sin(this.a)),
-                    this.y + this.r * ((2 / 3) * Math.sin(this.a) + Math.cos(this.a))
-                );
-                c.closePath();
-                c.stroke();
+                draw_triangle(this.x, this.y, SHIP_SIZE / 20, this.r, "white", null, this.a);
             }
         }
         else {
             //draw the explosion
-            c.fillStyle = "darkred";
-            c.beginPath();
-            c.arc(this.x, this.y, this.r * 1.7, 0, Math.PI * 2, false);
-            c.fill();
-
-            c.fillStyle = "red";
-            c.beginPath();
-            c.arc(this.x, this.y, this.r * 1.5, 0, Math.PI * 2, false);
-            c.fill();
-
-            c.fillStyle = "orange";
-            c.beginPath();
-            c.arc(this.x, this.y, this.r * 1.2, 0, Math.PI * 2, false);
-            c.fill();
-
-            c.fillStyle = "yellow";
-            c.beginPath();
-            c.arc(this.x, this.y, this.r * 0.9, 0, Math.PI * 2, false);
-            c.fill();
-
-            c.fillStyle = "white";
-            c.beginPath();
-            c.arc(this.x, this.y, this.r * 0.6, 0, Math.PI * 2, false);
-            c.fill();
+            draw_circle(this.x, this.y, this.r * 1.7, "darked");
+            draw_circle(this.x, this.y, this.r * 1.5, "red");
+            draw_circle(this.x, this.y, this.r * 1.2, "orange");
+            draw_circle(this.x, this.y, this.r * 0.9, "yellow");
+            draw_circle(this.x, this.y, this.r * 0.6, "white");
         }
 
         //center dot
@@ -265,10 +231,7 @@ class Ship {
 
         //bounding circle
         if (SHOW_BOUNDING) {
-            c.strokeStyle = "lime";
-            c.beginPath();
-            c.arc(this.x, this.y, this.r, 0, Math.PI * 2, false);
-            c.stroke();
+            draw_circle(this.x, this.y, this.r, "lime");
         }
     }
 
@@ -276,7 +239,7 @@ class Ship {
         //only move the ship if it is not exploding
         if (!this.exploding) {
             //thrust
-            if (ship.thrusting) {
+            if (this.thrusting) {
                 this.thrust_mag.x += SHIP_THRUST * Math.cos(this.a) / FPS;
                 this.thrust_mag.y -= SHIP_THRUST * Math.sin(this.a) / FPS;
             } else {
@@ -287,8 +250,8 @@ class Ship {
             this.a += this.rot;
 
             //move the ship
-            ship.x += ship.thrust_mag.x;
-            ship.y += ship.thrust_mag.y;
+            this.x += this.thrust_mag.x;
+            this.y += this.thrust_mag.y;
         }
 
         this.handle_screen_edge();
@@ -384,92 +347,100 @@ class Asteroid {
         asteroid_arr.splice(idx, 1);
     }
 }
+class Game {
+    constructor() {
+        this.ship = new Ship();
+        this.asteroid_arr = [];
+        this.current_level = 1;
+        this.current_score = 0;
+        this.current_lives = 3;
+    }
+    create_asteroids() {
+        this.asteroid_arr = [];
+        let x, y;
+        for (let i = 0; i < ASTEROID_NUM; i++) {
+            do {
+                x = rand_int(0, canvas.width);
+                y = rand_int(0, canvas.height);
+            } while (
+                distance_between_points(
+                    game.ship.x,
+                    game.ship.y,
+                    x,
+                    y
+                ) < ASTEROID_SIZE * 2 + this.ship.r
+            );
 
-//game logic
-let ship = new Ship();
-let asteroid_arr = [];
-
-function create_asteroids() {
-    asteroid_arr = [];
-    let x, y;
-    for (let i = 0; i < ASTEROID_NUM; i++) {
-        do {
-            x = rand_int(0, canvas.width);
-            y = rand_int(0, canvas.height);
-        } while (
-            distance_between_points(
-                ship.x,
-                ship.y,
-                x,
-                y
-            ) < ASTEROID_SIZE * 2 + ship.r
-        );
-
-        asteroid_arr.push(new Asteroid(x, y, Math.ceil(ASTEROID_SIZE / 2)));
+            this.asteroid_arr.push(new Asteroid(x, y, Math.ceil(ASTEROID_SIZE / 2)));
+        }
     }
 }
 
+//initialise starting game
+let game = new Game();
+game.create_asteroids();
+//game loop
 
-function update() {
+function game_loop() {
     //space
     c.fillStyle = "black";
     c.fillRect(0, 0, canvas.width, canvas.height);
-    ship.update();
-    for (let i of asteroid_arr) {
+    game.ship.update();
+    for (let i of game.asteroid_arr) {
         i.update();
     }
-    for (let i of ship.lasers) {
+    for (let i of game.ship.lasers) {
         i.update();
     }
     //delete the lasers if they have traveled more distance than const LASER_MAX_DISTANCE * canvas width
-    for (let i = ship.lasers.length - 1; i >= 0; i--) {
-        if (ship.lasers[i].distance_traveled > LASER_MAX_DISTANCE * canvas.width) {
-            ship.lasers.splice(i, 1);
+    for (let i = game.ship.lasers.length - 1; i >= 0; i--) {
+        if (game.ship.lasers[i].distance_traveled > LASER_MAX_DISTANCE * canvas.width) {
+            game.ship.lasers.splice(i, 1);
         }
     }
     //collision check if the ship is not invincible
-    if (!ship.exploding && !ship.invincible) {
-        for (let i = asteroid_arr.length - 1; i >= 0; i--) {
-            if (distance_between_points(ship.x, ship.y, asteroid_arr[i].x, asteroid_arr[i].y) < ship.r + asteroid_arr[i].r) {
-                Ship.explode(ship);
-                Asteroid.destroy(asteroid_arr, i);
+    if (!game.ship.exploding && !game.ship.invincible) {
+        for (let i = game.asteroid_arr.length - 1; i >= 0; i--) {
+            if (distance_between_points(game.ship.x, game.ship.y, game.asteroid_arr[i].x, game.asteroid_arr[i].y) < game.ship.r + game.asteroid_arr[i].r) {
+                Ship.explode(game.ship);
+                Asteroid.destroy(game.asteroid_arr, i);
                 break;
             }
 
         }
     }
     else {
-        ship.explode_time--;
-        if (ship.explode_time == 0) {
-            ship = new Ship();
+        game.ship.explode_time--;
+        if (game.ship.explode_time == 0) {
+            game.ship = new Ship();
         }
     }
     //collision of laser with asteroids and remove asteroids and lasers that collide
-    for (let i = asteroid_arr.length - 1; i >= 0; i--) {
-        let [ax, ay, ar] = [asteroid_arr[i].x, asteroid_arr[i].y, asteroid_arr[i].r];
-        for (let j = ship.lasers.length - 1; j >= 0; j--) {
-            let [lx, ly] = [ship.lasers[j].x, ship.lasers[j].y];
+    for (let i = game.asteroid_arr.length - 1; i >= 0; i--) {
+        let [ax, ay, ar] = [game.asteroid_arr[i].x, game.asteroid_arr[i].y, game.asteroid_arr[i].r];
+        for (let j = game.ship.lasers.length - 1; j >= 0; j--) {
+            let [lx, ly] = [game.ship.lasers[j].x, game.ship.lasers[j].y];
 
-            if (!ship.lasers[j].exploding && distance_between_points(ax, ay, lx, ly) < ar) {
+            if (!game.ship.lasers[j].exploding && distance_between_points(ax, ay, lx, ly) < ar) {
 
-                Asteroid.destroy(asteroid_arr, i);
-                Laser.explode(ship.lasers[j]);
+                Asteroid.destroy(game.asteroid_arr, i);
+                Laser.explode(game.ship.lasers[j]);
                 break;
             }
-            else{
-                ship.lasers[j].explode_time--;
-                if(ship.lasers[j].explode_time==0){
-                    ship.lasers.splice(j,1);
+            else {
+                game.ship.lasers[j].explode_time--;
+                if (game.ship.lasers[j].explode_time == 0) {
+                    game.ship.lasers.splice(j, 1);
                 }
             }
         }
     }
-    if(asteroid_arr.length == 0){
-        for (let j = ship.lasers.length - 1; j >= 0; j--) {
-            if (ship.lasers[j].exploding) {
-                ship.lasers[j].explode_time--;
-                if(ship.lasers[j].explode_time==0){
-                    ship.lasers.splice(j,1);
+    if (game.asteroid_arr.length == 0) {
+        for (let j = game.ship.lasers.length - 1; j >= 0; j--) {
+            if (game.ship.lasers[j].exploding) {
+                game.ship.lasers[j].explode_time--;
+                if (game.ship.lasers[j].explode_time == 0) {
+                    game.ship.lasers.splice(j, 1);
                 }
             }
         }
@@ -480,38 +451,38 @@ function update() {
 document.addEventListener("keyup", (e) => {
     switch (e.key) {
         case "ArrowLeft":
-            ship.rot = 0;
+            game.ship.rot = 0;
             break;
 
         case "ArrowRight":
-            ship.rot = -0;
+            game.ship.rot = -0;
             break;
         case "ArrowUp":
-            ship.thrusting = false;
+            game.ship.thrusting = false;
             break;
         case " ":
-            ship.can_shoot = true;
+            game.ship.can_shoot = true;
             break;
     }
 });
 document.addEventListener("keydown", (e) => {
     switch (e.key) {
         case "ArrowLeft":
-            ship.rot = (TURN_SPEED / 180) * Math.PI / FPS;
+            game.ship.rot = (TURN_SPEED / 180) * Math.PI / FPS;
             break;
 
         case "ArrowRight":
-            ship.rot = -(TURN_SPEED / 180) * Math.PI / FPS;
+            game.ship.rot = -(TURN_SPEED / 180) * Math.PI / FPS;
             break;
         case "ArrowUp":
-            ship.thrusting = true;
+            game.ship.thrusting = true;
             break;
         case " ":
-            ship.shoot_laser();
+            game.ship.shoot_laser();
             break;
     }
 });
 
 //game loop
-create_asteroids();
-setInterval(update, 1000 / FPS);
+
+setInterval(game_loop, 1000 / FPS);
