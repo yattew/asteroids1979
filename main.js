@@ -31,21 +31,16 @@ function distance_between_points(x1, y1, x2, y2) {
     );
 }
 function draw_triangle(x, y, lineWidth, radius, strokeColor, fillColor, angle) {
-
     c.lineWidth = lineWidth;
-
     c.beginPath();
-
     c.moveTo(//nose
         x + (4 / 3) * radius * Math.cos(angle),
         y - (4 / 3) * radius * Math.sin(angle)
     );
-
     c.lineTo(//rear left
         x - radius * ((2 / 3) * Math.cos(angle) + Math.sin(angle)),
         y + radius * ((2 / 3) * Math.sin(angle) - Math.cos(angle))
     );
-
     c.lineTo(//rear right
         x - radius * ((2 / 3) * Math.cos(angle) - Math.sin(angle)),
         y + radius * ((2 / 3) * Math.sin(angle) + Math.cos(angle))
@@ -353,7 +348,8 @@ class Game {
         this.asteroid_arr = [];
         this.current_level = 1;
         this.current_score = 0;
-        this.current_lives = 3;
+        this.remaining_lives = 3;
+        this.is_game_over = false;
     }
     create_asteroids() {
         this.asteroid_arr = [];
@@ -374,79 +370,88 @@ class Game {
             this.asteroid_arr.push(new Asteroid(x, y, Math.ceil(ASTEROID_SIZE / 2)));
         }
     }
-}
-
-//initialise starting game
-let game = new Game();
-game.create_asteroids();
-//game loop
-
-function game_loop() {
-    //space
-    c.fillStyle = "black";
-    c.fillRect(0, 0, canvas.width, canvas.height);
-    game.ship.update();
-    for (let i of game.asteroid_arr) {
-        i.update();
-    }
-    for (let i of game.ship.lasers) {
-        i.update();
-    }
-    //delete the lasers if they have traveled more distance than const LASER_MAX_DISTANCE * canvas width
-    for (let i = game.ship.lasers.length - 1; i >= 0; i--) {
-        if (game.ship.lasers[i].distance_traveled > LASER_MAX_DISTANCE * canvas.width) {
-            game.ship.lasers.splice(i, 1);
+    draw() {
+        let x = 10;
+        let y = 30;
+        c.font = "20px Arial";
+        c.fillStyle = "white";
+        let live_text = `Lives `;
+        c.fillText(live_text, x, y);
+        for (let i = 1; i <= this.remaining_lives; i++) {
+            draw_triangle((x * 5) + (20 * i), y * 0.85, SHIP_SIZE / 20, SHIP_SIZE / 4, "white", null, Math.PI / 2);
         }
     }
-    //collision check if the ship is not invincible
-    if (!game.ship.exploding && !game.ship.invincible) {
-        for (let i = game.asteroid_arr.length - 1; i >= 0; i--) {
-            if (distance_between_points(game.ship.x, game.ship.y, game.asteroid_arr[i].x, game.asteroid_arr[i].y) < game.ship.r + game.asteroid_arr[i].r) {
-                Ship.explode(game.ship);
-                Asteroid.destroy(game.asteroid_arr, i);
-                break;
+    update() {
+        for (let i of this.asteroid_arr) {
+            i.update();
+        }
+        for (let i of this.ship.lasers) {
+            i.update();
+        }
+        if (this.remaining_lives > 0) {
+            this.ship.update();
+        }
+        else{
+            this.is_game_over = true;
+        }
+        //delete the lasers if they have traveled more distance than const LASER_MAX_DISTANCE * canvas width
+        for (let i = this.ship.lasers.length - 1; i >= 0; i--) {
+            if (this.ship.lasers[i].distance_traveled > LASER_MAX_DISTANCE * canvas.width) {
+                this.ship.lasers.splice(i, 1);
             }
-
         }
-    }
-    else {
-        game.ship.explode_time--;
-        if (game.ship.explode_time == 0) {
-            game.ship = new Ship();
-        }
-    }
-    //collision of laser with asteroids and remove asteroids and lasers that collide
-    for (let i = game.asteroid_arr.length - 1; i >= 0; i--) {
-        let [ax, ay, ar] = [game.asteroid_arr[i].x, game.asteroid_arr[i].y, game.asteroid_arr[i].r];
-        for (let j = game.ship.lasers.length - 1; j >= 0; j--) {
-            let [lx, ly] = [game.ship.lasers[j].x, game.ship.lasers[j].y];
+        //collision check if the ship is not invincible
+        if (!this.ship.exploding && !this.ship.invincible) {
+            for (let i = this.asteroid_arr.length - 1; i >= 0; i--) {
+                if (distance_between_points(this.ship.x, this.ship.y, this.asteroid_arr[i].x, this.asteroid_arr[i].y) < this.ship.r + this.asteroid_arr[i].r) {
+                    Ship.explode(this.ship);
+                    Asteroid.destroy(this.asteroid_arr, i);
+                    break;
+                }
 
-            if (!game.ship.lasers[j].exploding && distance_between_points(ax, ay, lx, ly) < ar) {
-
-                Asteroid.destroy(game.asteroid_arr, i);
-                Laser.explode(game.ship.lasers[j]);
-                break;
             }
-            else {
-                game.ship.lasers[j].explode_time--;
-                if (game.ship.lasers[j].explode_time == 0) {
-                    game.ship.lasers.splice(j, 1);
+        }
+        else {
+            this.ship.explode_time--;
+            if (this.ship.explode_time == 0) {
+                this.ship = new Ship();
+                this.remaining_lives--;
+            }
+        }
+        //collision of laser with asteroids and remove asteroids and lasers that collide
+        for (let i = this.asteroid_arr.length - 1; i >= 0; i--) {
+            let [ax, ay, ar] = [this.asteroid_arr[i].x, this.asteroid_arr[i].y, this.asteroid_arr[i].r];
+            for (let j = this.ship.lasers.length - 1; j >= 0; j--) {
+                let [lx, ly] = [this.ship.lasers[j].x, this.ship.lasers[j].y];
+
+                if (!this.ship.lasers[j].exploding && distance_between_points(ax, ay, lx, ly) < ar) {
+
+                    Asteroid.destroy(this.asteroid_arr, i);
+                    Laser.explode(this.ship.lasers[j]);
+                    break;
+                }
+                else {
+                    this.ship.lasers[j].explode_time--;
+                    if (this.ship.lasers[j].explode_time == 0) {
+                        this.ship.lasers.splice(j, 1);
+                    }
                 }
             }
         }
-    }
-    if (game.asteroid_arr.length == 0) {
-        for (let j = game.ship.lasers.length - 1; j >= 0; j--) {
-            if (game.ship.lasers[j].exploding) {
-                game.ship.lasers[j].explode_time--;
-                if (game.ship.lasers[j].explode_time == 0) {
-                    game.ship.lasers.splice(j, 1);
+        if (this.asteroid_arr.length == 0) {
+            for (let j = this.ship.lasers.length - 1; j >= 0; j--) {
+                if (this.ship.lasers[j].exploding) {
+                    this.ship.lasers[j].explode_time--;
+                    if (this.ship.lasers[j].explode_time == 0) {
+                        this.ship.lasers.splice(j, 1);
+                    }
                 }
             }
         }
+
+        this.draw();
     }
 }
-
 //event listeners
 document.addEventListener("keyup", (e) => {
     switch (e.key) {
@@ -482,6 +487,21 @@ document.addEventListener("keydown", (e) => {
             break;
     }
 });
+
+//initialise starting game
+let game = new Game();
+game.create_asteroids();
+
+//game loop
+
+function game_loop() {
+    //space
+    c.fillStyle = "black";
+    c.fillRect(0, 0, canvas.width, canvas.height);
+    game.update();
+}
+
+
 
 //game loop
 
