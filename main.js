@@ -4,7 +4,7 @@ const SHIP_SIZE = 30;
 const TURN_SPEED = 360; //degree per second
 const SHIP_THRUST = 5; //acceleration in pixel
 const FRICTION = 0.7; //friction coeff
-const ASTEROID_NUM = 3; //initial number of asteroids
+const ASTEROID_NUM = 1; //initial number of asteroids
 const ASTEROID_SPEED = 70; //max speed of the asteroid pixel/second
 const ASTEROID_SIZE = 100; //size of the asteroid in pixels
 const ASTEROID_JAGGEDNESS = 0.4; // jaggedness of asteroid 0-1
@@ -261,11 +261,11 @@ class Ship {
 }
 
 class Asteroid {
-    constructor(x, y, r) {
+    constructor(x, y, r, speed_factor) {
         this.x = x;
         this.y = y;
-        this.dx = Math.random() * ASTEROID_SPEED / FPS * (Math.random() < 0.5 ? -1 : 1);
-        this.dy = Math.random() * ASTEROID_SPEED / FPS * (Math.random() < 0.5 ? -1 : 1);
+        this.dx = Math.random() * ASTEROID_SPEED / FPS * (Math.random() < 0.5 ? -1 : 1) * (1+speed_factor/10);
+        this.dy = Math.random() * ASTEROID_SPEED / FPS * (Math.random() < 0.5 ? -1 : 1) * (1+speed_factor/10);
         this.r = r;
         this.a = Math.random() * Math.PI * 2;
         this.color = "#adadad";
@@ -327,16 +327,17 @@ class Asteroid {
         this.handle_screen_edge();
         this.draw();
     }
-    static destroy(asteroid_arr, idx) {
+    static destroy(asteroid_arr, idx, speed_factor) {
+        
         let [x, y, r] = [asteroid_arr[idx].x, asteroid_arr[idx].y, asteroid_arr[idx].r];
         //split int two new asteroids if required
         if (r == Math.ceil(ASTEROID_SIZE / 2)) {
-            asteroid_arr.push(new Asteroid(x, y, Math.ceil(ASTEROID_SIZE / 4)));
-            asteroid_arr.push(new Asteroid(x, y, Math.ceil(ASTEROID_SIZE / 4)));
+            asteroid_arr.push(new Asteroid(x, y, Math.ceil(ASTEROID_SIZE / 4),speed_factor));
+            asteroid_arr.push(new Asteroid(x, y, Math.ceil(ASTEROID_SIZE / 4),speed_factor));
         }
         else if (r == Math.ceil(ASTEROID_SIZE / 4)) {
-            asteroid_arr.push(new Asteroid(x, y, Math.ceil(ASTEROID_SIZE / 8)));
-            asteroid_arr.push(new Asteroid(x, y, Math.ceil(ASTEROID_SIZE / 8)));
+            asteroid_arr.push(new Asteroid(x, y, Math.ceil(ASTEROID_SIZE / 8),speed_factor));
+            asteroid_arr.push(new Asteroid(x, y, Math.ceil(ASTEROID_SIZE / 8),speed_factor));
         }
         //remove parent asteroid from asteroid_arr
         asteroid_arr.splice(idx, 1);
@@ -350,11 +351,13 @@ class Game {
         this.current_score = 0;
         this.remaining_lives = 3;
         this.is_game_over = false;
+        this.level_text_alpha = 1;
+        this.text_duration = 3;// text appearence duration in seconds
     }
     create_asteroids() {
         this.asteroid_arr = [];
         let x, y;
-        for (let i = 0; i < ASTEROID_NUM; i++) {
+        for (let i = 0; i < ASTEROID_NUM+this.current_level-1; i++) {
             do {
                 x = rand_int(0, canvas.width);
                 y = rand_int(0, canvas.height);
@@ -366,8 +369,7 @@ class Game {
                     y
                 ) < ASTEROID_SIZE * 2 + this.ship.r
             );
-
-            this.asteroid_arr.push(new Asteroid(x, y, Math.ceil(ASTEROID_SIZE / 2)));
+            this.asteroid_arr.push(new Asteroid(x, y, Math.ceil(ASTEROID_SIZE / 2), this.current_level));
         }
     }
     draw() {
@@ -380,9 +382,25 @@ class Game {
         for (let i = 1; i <= this.remaining_lives; i++) {
             draw_triangle((x * 5) + (20 * i), y * 0.85, SHIP_SIZE / 20, SHIP_SIZE / 4, "white", null, Math.PI / 2);
         }
+        let score_text = `score ${this.current_score}`;
+        c.fillText(score_text,canvas.width/2,y);
+        if (this.level_text_alpha >= 0) {
+            c.font = "30px Arial";
+            c.fillStyle = `rgba(255,255,255,${this.level_text_alpha})`;
+            c.fillText(`Level ${this.current_level}`,canvas.width/2 - 50,canvas.height/2+50);
+            this.level_text_alpha-=(1/3)*3/FPS;
+        }
+
     }
     update() {
+        if(this.asteroid_arr.length==0){
+            console.log("zero");
+            this.current_level++;
+            this.level_text_alpha = 1;
+            this.create_asteroids();
+        }
         for (let i of this.asteroid_arr) {
+            // console.log(i);
             i.update();
         }
         for (let i of this.ship.lasers) {
@@ -391,7 +409,7 @@ class Game {
         if (this.remaining_lives > 0) {
             this.ship.update();
         }
-        else{
+        else {
             this.is_game_over = true;
         }
         //delete the lasers if they have traveled more distance than const LASER_MAX_DISTANCE * canvas width
@@ -405,7 +423,8 @@ class Game {
             for (let i = this.asteroid_arr.length - 1; i >= 0; i--) {
                 if (distance_between_points(this.ship.x, this.ship.y, this.asteroid_arr[i].x, this.asteroid_arr[i].y) < this.ship.r + this.asteroid_arr[i].r) {
                     Ship.explode(this.ship);
-                    Asteroid.destroy(this.asteroid_arr, i);
+                    Asteroid.destroy(this.asteroid_arr, i,this.current_level);
+                    this.current_score+=100;
                     break;
                 }
 
@@ -426,7 +445,8 @@ class Game {
 
                 if (!this.ship.lasers[j].exploding && distance_between_points(ax, ay, lx, ly) < ar) {
 
-                    Asteroid.destroy(this.asteroid_arr, i);
+                    Asteroid.destroy(this.asteroid_arr, i,this.current_level);
+                    this.current_score+=100;
                     Laser.explode(this.ship.lasers[j]);
                     break;
                 }
@@ -498,7 +518,11 @@ function game_loop() {
     //space
     c.fillStyle = "black";
     c.fillRect(0, 0, canvas.width, canvas.height);
+    
     game.update();
+    if(game.is_game_over){
+        console.log("game over");
+    }
 }
 
 
