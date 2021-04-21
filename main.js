@@ -350,7 +350,7 @@ class Game {
     constructor() {
         this.ship = new Ship();
         this.asteroid_arr = [];
-        this.current_level = 5;
+        this.current_level = 1;
         this.current_score = 0;
         this.remaining_lives = 3;
         this.is_game_over = false;
