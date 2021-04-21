@@ -61,8 +61,11 @@ function draw_circle(x, y, radius, fill_color) {
     c.arc(x, y, radius, 0, Math.PI * 2, false);
     c.fill();
 }
+function draw_rectangle(x,y,width,height){
 
+}
 //game objects
+
 class Laser {
     constructor(x, y, dx, dy) {
         this.x = x;
@@ -264,8 +267,8 @@ class Asteroid {
     constructor(x, y, r, speed_factor) {
         this.x = x;
         this.y = y;
-        this.dx = Math.random() * ASTEROID_SPEED / FPS * (Math.random() < 0.5 ? -1 : 1) * (1+speed_factor/10);
-        this.dy = Math.random() * ASTEROID_SPEED / FPS * (Math.random() < 0.5 ? -1 : 1) * (1+speed_factor/10);
+        this.dx = Math.random() * ASTEROID_SPEED / FPS * (Math.random() < 0.5 ? -1 : 1) * (1+speed_factor/5);
+        this.dy = Math.random() * ASTEROID_SPEED / FPS * (Math.random() < 0.5 ? -1 : 1) * (1+speed_factor/5);
         this.r = r;
         this.a = Math.random() * Math.PI * 2;
         this.color = "#adadad";
@@ -347,12 +350,13 @@ class Game {
     constructor() {
         this.ship = new Ship();
         this.asteroid_arr = [];
-        this.current_level = 1;
+        this.current_level = 5;
         this.current_score = 0;
         this.remaining_lives = 3;
         this.is_game_over = false;
         this.level_text_alpha = 1;
         this.text_duration = 3;// text appearence duration in seconds
+        this.create_asteroids();
     }
     create_asteroids() {
         this.asteroid_arr = [];
@@ -363,8 +367,8 @@ class Game {
                 y = rand_int(0, canvas.height);
             } while (
                 distance_between_points(
-                    game.ship.x,
-                    game.ship.y,
+                    this.ship.x,
+                    this.ship.y,
                     x,
                     y
                 ) < ASTEROID_SIZE * 2 + this.ship.r
@@ -394,7 +398,6 @@ class Game {
     }
     update() {
         if(this.asteroid_arr.length==0){
-            console.log("zero");
             this.current_level++;
             this.level_text_alpha = 1;
             this.create_asteroids();
@@ -472,6 +475,38 @@ class Game {
         this.draw();
     }
 }
+class Button{
+    constructor(x,y,width,height,text){
+        this.x = x;
+        this.y = y;
+        this.width = width;
+        this.height = height;
+        this.text = text;
+    }
+    draw(){
+        c.strokeStyle = "white";
+        c.beginPath();
+        c.moveTo(this.x,this.y);
+        c.lineTo(this.x+this.width,this.y);
+        c.lineTo(this.x+this.width,this.y+this.height);
+        c.lineTo(this.x,this.y+this.height);
+        c.closePath();
+        c.stroke();
+
+        c.font = "20px Arial";
+        c.fillStyle = "white";
+        c.fillText(this.text,this.x+50,this.y+35);
+    }
+    is_clicked(mouse_x,mouse_y){
+        if(mouse_x>this.x && mouse_x<this.x+this.width && mouse_y>this.y && mouse_y<this.y+this.height){
+            return true;
+        }
+        return false;
+    }
+    update(){
+        this.draw();
+    }
+}
 //event listeners
 document.addEventListener("keyup", (e) => {
     switch (e.key) {
@@ -507,21 +542,29 @@ document.addEventListener("keydown", (e) => {
             break;
     }
 });
+canvas.addEventListener("click",(e)=>{
+    let x = e.clientX;
+    let y = e.clientY;
+    if(button.is_clicked(x,y)){
+        game = new Game();
+    }
+})
 
 //initialise starting game
 let game = new Game();
-game.create_asteroids();
+
 
 //game loop
-
+let button = new Button(canvas.width/2-100,canvas.height/2,200,50,"New Game");
 function game_loop() {
     //space
     c.fillStyle = "black";
     c.fillRect(0, 0, canvas.width, canvas.height);
     
     game.update();
+    
     if(game.is_game_over){
-        console.log("game over");
+        button.update();
     }
 }
 
